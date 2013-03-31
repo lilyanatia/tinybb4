@@ -1,0 +1,7 @@
+<Files threads>
+DefaultType application/json
+</Files>
+
+<Files post>
+SetHandler cgi-script
+</Files>

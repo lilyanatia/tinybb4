@@ -1,0 +1,59 @@
+#!/usr/bin/env perl
+
+use strict;
+use open ':utf8';
+use Fcntl qw(:flock);
+use JSON;
+use CGI;
+$CGI::POST_MAX = 4096;
+
+my $query = new CGI;
+make_error(-status => '405 Method Not Allowed') if $query->request_method() != 'POST';
+$query->import_names('P');
+make_error(-status => '400 Bad Request') unless length($P::comment) > 0;
+$P::thread = $P::thread + 0;
+if($P::thread < 0) { $P::thread = create_thread($P::title, $P::comment); }
+else { add_post($P::thread, $P::comment); }
+print $query->redirect(-uri => thread_path($P::thread), -status => 303);
+
+sub make_error(@)
+{ print $query->header(@_);
+  exit; }
+
+sub thread_path($)
+{ my ($thread) = @_;
+  my $full = $ENV{'SCRIPT_NAME'};
+  $full =~ s!/[^/]*$!/thread/$thread!;
+  return $full; }
+
+sub create_thread($$)
+{ my ($title, $comment) = @_;
+  make_error(-status => '400 Bad Request') unless $title;
+  open my $threads_file, '+<', 'threads';
+  flock $threads_file, LOCK_EX;
+  my $threads = decode_json(join '', <$threads_file>);
+  my @threads = @{$threads}; 
+  @threads[@threads + 0] = { 'id' => @threads + 0,
+                             'title' => $title };
+  seek $threads_file, 0, 0;
+  print $threads_file encode_json(\@threads);
+  flock $threads_file, LOCK_UN;
+  close $threads_file;
+  open my $thread_file, '>', "thread/$#threads";
+  flock $thread_file, LOCK_EX;
+  print $thread_file encode_json([$comment]);
+  flock $thread_file, LOCK_UN;
+  close $thread_file;
+  return $#threads; }
+
+sub add_post($$)
+{ my ($thread, $comment) = @_;
+  make_error(-status => '400 Bad Request') unless -e "thread/$thread";
+  open my $thread_file, '+<', "thread/$thread";
+  flock $thread_file, LOCK_EX;
+  my $thread = decode_json(join '', <$thread_file>);
+  my @thread = (@{$thread}, $comment);
+  seek $thread_file, 0, 0;
+  print $thread_file encode_json(\@thread);
+  flock $thread_file, LOCK_UN;
+  close $thread_file; }
