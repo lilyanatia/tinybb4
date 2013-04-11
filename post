@@ -12,9 +12,11 @@ make_error(-status => '405 Method Not Allowed') if $query->request_method() != '
 $query->import_names('P');
 make_error(-status => '400 Bad Request') unless length($P::comment) > 0;
 $P::thread = $P::thread + 0;
+my $thread_json;
 if($P::thread < 0) { $P::thread = create_thread($P::title, $P::comment); }
 else { add_post($P::thread, $P::comment); }
-print $query->redirect(-uri => thread_path($P::thread), -status => 303);
+print $query->header('application/json', '201 Created', -Location => thread_path($P::thread));
+print $thread_json;
 
 sub make_error(@)
 { print $query->header(@_);
@@ -41,7 +43,8 @@ sub create_thread($$)
   close $threads_file;
   open my $thread_file, '>', "thread/$#threads";
   flock $thread_file, LOCK_EX;
-  print $thread_file encode_json([$comment]);
+  $thread_json = encode_json([$comment]);
+  print $thread_file $thread_json;
   flock $thread_file, LOCK_UN;
   close $thread_file;
   return $#threads; }
@@ -54,6 +57,7 @@ sub add_post($$)
   my $thread = decode_json(join '', <$thread_file>);
   my @thread = (@{$thread}, $comment);
   seek $thread_file, 0, 0;
-  print $thread_file encode_json(\@thread);
+  $thread_json = encode_json(\@thread);
+  print $thread_file $thread_json;
   flock $thread_file, LOCK_UN;
   close $thread_file; }
