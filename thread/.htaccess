@@ -3,3 +3,4 @@ ForceType application/json
 DirectoryIndex ../threads
 Header set Access-Control "allow <*>"
 Header set Access-Control-Allow-Origin *
+Header set Cache-control "max-age=0, must-revalidate"
