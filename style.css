@@ -7,7 +7,7 @@ input, textarea { display: block; width: 75%; margin: 0.5em auto; }
 .thread_title:nth-child(even) { background: #beb; }
 .thread { background: #eee; }
 .comment:nth-child(even) { background: #ddd; }
-.comment div { display: table-cell; vertical-align: middle; white-space: pre; }
+.comment div { display: table-cell; vertical-align: middle; white-space: pre-wrap; }
 .post_number { font-size: xx-large; padding-right: 0.5em; }
 blockquote { margin: 0; color: #060; }
 #thread_button { position: fixed; top: 0; right: 0; background: #eee; }
