@@ -1,5 +1,4 @@
 var threads;
-var oldthreads;
 
 $(document).ready(function()
 { $('body').append($('<div id="thread_button" class="reply_button">New thread</div>').click(function() { reply_form(-1); }));
