@@ -8,19 +8,18 @@ use CGI;
 $CGI::POST_MAX = 4096;
 
 my $query = new CGI;
-make_error(-status => '405 Method Not Allowed') if $query->request_method() != 'POST';
-$query->import_names('P');
-make_error(-status => '400 Bad Request') unless length($P::comment) > 0;
-$P::thread = $P::thread + 0;
 my $thread_json;
+
+if($query->request_method() != 'POST') { print $query->header(-status => '405 Method Not Allowed'); exit; }
+$query->import_names('P');
+bad_request() unless length($P::comment) > 0;
+$P::thread = $P::thread + 0;
 if($P::thread < 0) { $P::thread = create_thread($P::title, $P::comment); }
 else { add_post($P::thread, $P::comment); }
-print $query->header('application/json', '201 Created', -Location => thread_path($P::thread));
-print $thread_json;
+print $query->header('application/json', '201 Created', -Location => thread_path($P::thread)), $thread_json;
 
-sub make_error(@)
-{ print $query->header(@_);
-  exit; }
+sub bad_request()
+{ print $query->header(-status => '400 Bad Request'); exit; }
 
 sub thread_path($)
 { my ($thread) = @_;
@@ -30,13 +29,12 @@ sub thread_path($)
 
 sub create_thread($$)
 { my ($title, $comment) = @_;
-  make_error(-status => '400 Bad Request') unless $title;
+  bad_request() unless $title;
   open my $threads_file, '+<', 'threads';
   flock $threads_file, LOCK_EX;
   my $threads = decode_json(join '', <$threads_file>);
   my @threads = @{$threads}; 
-  @threads[@threads + 0] = { 'id' => @threads + 0,
-                             'title' => $title };
+  @threads[@threads + 0] = { 'id' => @threads + 0, 'title' => $title };
   seek $threads_file, 0, 0;
   print $threads_file encode_json(\@threads);
   flock $threads_file, LOCK_UN;
@@ -51,7 +49,7 @@ sub create_thread($$)
 
 sub add_post($$)
 { my ($thread, $comment) = @_;
-  make_error(-status => '400 Bad Request') unless -e "thread/$thread";
+  bad_request() unless -e "thread/$thread";
   open my $thread_file, '+<', "thread/$thread";
   flock $thread_file, LOCK_EX;
   my $thread = decode_json(join '', <$thread_file>);

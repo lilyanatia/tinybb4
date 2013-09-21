@@ -21,8 +21,7 @@ function show_thread()
 { var id = this.id;
   $(this).unbind('click', show_thread);
   this.style.cursor = 'default';
-  $.getJSON('thread/' + id, {},
-    function(data) { add_comments(id, data); }); }
+  $.getJSON('thread/' + id, {}, function(data) { add_comments(id, data); }); }
 
 function add_comments(id, data)
 { var comments = $('<div class="thread"></div>');
@@ -32,8 +31,7 @@ function add_comments(id, data)
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i]));
     comments.append(comment); }
-    comments.append($('<div class="reply_button">Reply</div>').click(
-      function() { reply_form($(this).parent().parent().id); })); }
+    comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form($(this).parent().parent().id); })); }
 
 function reply_form(id)
 { var container = $('<div id="reply_form">');
@@ -41,8 +39,7 @@ function reply_form(id)
   var form = $('<form onsubmit="return false;"></form>');
   container.append(form);
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
-  if(id < 0)
-    form.append($('<input id="title" required placeholder="Title">'));
+  if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
   form.append($('<input type="submit" onclick="submit_form()">')); }
 
