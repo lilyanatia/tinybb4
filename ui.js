@@ -39,10 +39,10 @@ function verify_signature(id, n, data)
   var comment_data = new Uint16Array(length);
   for(var j = 0; j < length; ++j) comment_data[j] = data.comment.charCodeAt(j);
   var signature_data = new Uint8Array(256);
-  for(var j = 0; j < 256; ++j) signature_data[j] = JSON.parse(data.signature)[j];
+  for(var j = 0; j < 256; ++j) signature_data[j] = data.signature[j];
   console.log('verify: ' + n);
   crypto.subtle.importKey(
-    'jwk', JSON.parse(data.key),
+    'jwk', data.key,
     { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
     true, ['verify']).then(
     function(key)
@@ -52,7 +52,7 @@ function verify_signature(id, n, data)
           function(result)
           { if(result)
             { $('#' + id + '_' + (n + 1)).addClass('valid');
-              var k = JSON.parse(data.key).n;
+              var k = data.key.n;
               var length = k.length;
               var key_data = new Uint8Array(length);
               for(var j = 0; j < length; ++j) key_data[j] = k.charCodeAt(j);

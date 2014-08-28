@@ -45,7 +45,9 @@ sub create_thread($$$$)
   flock $thread_file, LOCK_EX;
   $thread_json = encode_json(
     [ $key ?
-      { 'comment' => $comment, 'key' => $key, 'signature' => $signature } :
+      { 'comment' => $comment,
+        'key' => decode_json($key),
+        'signature' => decode_json($signature) } :
       { 'comment' => $comment }
     ]);
   print $thread_file $thread_json;
@@ -61,7 +63,9 @@ sub add_post($$$$)
   my $thread = decode_json(join '', <$thread_file>);
   my @thread = (@{$thread},
     $key ?
-    { 'comment' => $comment, 'key' => $key, 'signature' => $signature } :
+    { 'comment' => $comment,
+      'key' => decode_json($key),
+      'signature' => decode_json($signature) } :
     { 'comment' => $comment } );
   seek $thread_file, 0, 0;
   $thread_json = encode_json(\@thread);
