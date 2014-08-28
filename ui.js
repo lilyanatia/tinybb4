@@ -30,7 +30,7 @@ function add_comments(id, data)
   { var comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i].comment));
-    if(window.crypto && crypto.subtle && data[i].key) verify_signature(id, i, data[i]);
+    if(location.protocol == 'https:' && window.crypto && crypto.subtle && data[i].key) verify_signature(id, i, data[i]);
     comments.append(comment); }
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form($(this).parent().parent().id); })); }
   
@@ -72,7 +72,7 @@ function reply_form(id)
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
-  if(window.crypto && crypto.subtle) form.append($('<textarea id="key" rows="1" placeholder="Key (optional)"></textarea><input type="button" value="Generate Key" onclick="generate_key()">'));
+  if(location.protocol == 'https:' && window.crypto && crypto.subtle) form.append($('<textarea id="key" rows="1" placeholder="Key (optional)"></textarea><input type="button" value="Generate Key" onclick="generate_key()">'));
   form.append($('<input type="submit" onclick="submit_form()">')); }
 
 function generate_key()
