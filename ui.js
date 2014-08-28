@@ -40,7 +40,6 @@ function verify_signature(id, n, data)
   for(var j = 0; j < length; ++j) comment_data[j] = data.comment.charCodeAt(j);
   var signature_data = new Uint8Array(256);
   for(var j = 0; j < 256; ++j) signature_data[j] = data.signature[j];
-  console.log('verify: ' + n);
   crypto.subtle.importKey(
     'jwk', data.key,
     { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
@@ -120,9 +119,6 @@ function submit_form()
               { var signature_data = new Uint8Array(signature_buffer);
                 var signature = new Array(256);
                 for(var i = 0; i < 256; ++i) signature[i] = signature_data[i];
-                console.log({ 'title': title, 'thread': thread, 'comment': comment,
-                         'key': JSON.stringify(key_data),
-                         'signature': JSON.stringify(signature) });
                 $.post('post',
                        { 'title': title, 'thread': thread, 'comment': comment,
                          'key': JSON.stringify(key_data),
