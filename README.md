@@ -9,7 +9,7 @@ threads
 -------
 This file contains a list of threads as a JSON array. Each thread contains an ```id``` (integer) and a ```title``` (string).
 
-thread/<<id>>
+thread/```id```
 -----------
 This file contains all the posts in the specified thread as a JSON array. Each post contains a ```comment``` (string) and may also contain a ```key``` (JSON Web Key) and ```signature``` (array of integers)
 
