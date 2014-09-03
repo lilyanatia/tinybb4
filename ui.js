@@ -63,8 +63,8 @@ function verify_signature(id, n, data)
     function(digest)
     { if(digest)
       { var digest_data = new Uint8Array(digest);
-        var a = new Array();
-        for(var j = 0; j < 20; ++j) a[j] = digest_data[j]; 
+        var a = '';
+        for(var j = 0; j < 20; ++j) a += String.fromCharCode(digest_data[j]); 
         $('#' + id + '_' + (n + 1)).attr('title', btoa(a)); }},
     console.error.bind('Unable to compute hash.')); }
 
@@ -102,8 +102,8 @@ function update_preview()
   crypto.subtle.digest({ name: 'SHA-1' }, key_data).then(
   function(digest)
   { var digest_data = new Uint8Array(digest);
-    var a = new Array();
-    for(var i = 0; i < 20; ++i) a[i] = digest_data[i];
+    var a = '';
+    for(var i = 0; i < 20; ++i) a += String.fromCharCode(digest_data[i]);
     $('#hash_preview').val(btoa(a)); },
   console.error.bind('Unable to compute hash.')); }
 
