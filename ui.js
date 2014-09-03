@@ -76,7 +76,7 @@ function reply_form(id)
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
-  if(location.protocol == 'https:' && window.crypto && crypto.subtle) form.append($('<textarea id="key" rows="1" placeholder="Key (optional)"></textarea><input type="button" value="Generate Key" onclick="generate_key()">'));
+  if(location.protocol == 'https:' && window.crypto && crypto.subtle) form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea><input type="text" disabled id="hash_preview"><input type="button" value="Generate Key" onclick="generate_key()">'));
   form.append($('<input type="submit" onclick="submit_form()">')); }
 
 function generate_key()
@@ -90,8 +90,22 @@ function generate_key()
    { return crypto.subtle.exportKey('jwk', key.privateKey); },
    console.error.bind(console, 'Unable to generate key.')).then(
    function(exported_key)
-   { $('#key').val(JSON.stringify(exported_key)); },
-   console.error.bind('Unable to export key.')); }
+   { $('#key').val(JSON.stringify(exported_key));
+     update_preview(); }); }
+
+function update_preview()
+{ var key = JSON.parse($('#key').val());
+  if(!key.n) return;
+  var length = key.n.length;
+  var key_data = new Uint8Array(length);
+  for(var i = 0; i < length; ++i) key_data[i] = key.n.charCodeAt(i);
+  crypto.subtle.digest({ name: 'SHA-1' }, key_data).then(
+  function(digest)
+  { var digest_data = new Uint8Array(digest);
+    var a = new Array();
+    for(var i = 0; i < 20; ++i) a[i] = digest_data[i];
+    $('#hash_preview').val(btoa(a)); },
+  console.error.bind('Unable to compute hash.')); }
 
 function submit_form()
 { var title = $('#title').val();
