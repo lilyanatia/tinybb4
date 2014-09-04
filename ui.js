@@ -10,10 +10,10 @@ $(document).ready(function()
         publicExponent: new Uint8Array([1, 0, 1]),
         hash: { name: 'SHA-512' } },
       true, []).then(
-    function(key)
-    { return window.crypto.exportKey('jwk', key.publicKey); }).then(
-    function(exported_key)
-    { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; }); }
+      function(key)
+      { return crypto.subtle.exportKey('jwk', key.publicKey); }).then(
+      function(exported_key)
+      { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; }); }
   $.getJSON('threads', {}, update_threads); });
 
 function update_threads(data)
@@ -50,7 +50,7 @@ function verify_signature(id, n, data)
 { var signature_data = new Uint8Array(256);
   for(var j = 0; j < 256; ++j) signature_data[j] = data.signature[j];
   crypto.subtle.importKey(
-    'jwk', data.key,
+    'jwk', jwk_object_to_import(data.key),
     { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
     true, ['verify']).then(
     function(key)
@@ -92,7 +92,7 @@ function generate_key()
    { return crypto.subtle.exportKey('jwk', key.privateKey); },
    console.error.bind(console, 'Unable to generate key.')).then(
    function(exported_key)
-   { $('#key').val(JSON.stringify(exported_key));
+   { $('#key').val(jwk_export_to_string(exported_key));
      update_preview(); }); }
 
 function update_preview()
@@ -107,10 +107,9 @@ function submit_form()
 { var title = $('#title').val();
   var thread = $('#thread').val();
   var comment = $('#comment').val();
-  var key = $('#key').val();
+  var key_data = JSON.parse($('#key').val());
   if(key)
-  { var key_data = JSON.parse(key);
-    crypto.subtle.importKey('jwk', key_data,
+  { crypto.subtle.importKey('jwk', jwk_object_to_import(key_data),
       { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
       true, ['sign']).then(
       function(private_key)
@@ -132,17 +131,12 @@ function submit_form()
         return signature; },
       console.error.bind('Unable to sign.')).then(
       function(signature)
-      { crypto.subtle.importKey('jwk', key_data,
-          { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
-          true, ['verify']).then(
-        function(public_key)
-        { $.post('post',
-            { 'title': title, 'thread': thread, 'comment': comment,
-              'key': JSON.stringify(key_data),
-              'signature': JSON.stringify(signature) },
-            function() { location.reload(); }).fail(
-            function() { alert('Post failed. Please check your input and try again.'); }); },
-        console.error.bind('Unable to import public key.')); }); }
+      { $.post('post',
+          { 'title': title, 'thread': thread, 'comment': comment,
+            'key': JSON.stringify(key_data),
+            'signature': JSON.stringify(signature) },
+          function() { location.reload(); }).fail(
+          function() { alert('Post failed. Please check your input and try again.'); }); }); }
   else $.post('post', { 'title': title, 'thread': thread, 'comment': comment },
          function() { location.reload(); }).fail(
          function() { alert('Post failed. Please check your input and try again.'); }); }
@@ -157,22 +151,12 @@ function array_to_string(array)
   for(var i = 0; i < array.length; ++i) string += String.fromCharCode(array[i]);
   return string; }
 
-function jwk_exp_to_string(k)
+function jwk_export_to_string(k)
 { if(k instanceof ArrayBuffer)
     return array_to_string(new Uint8Array(k));
   return JSON.stringify(k); }
 
-function jwk_exp_to_object(k)
-{ if(k instanceof ArrayBuffer)
-    return JSON.parse(array_to_string(new Uint8Array(k)));
-  return k; }
-
-function jwk_string_to_imp(k)
-{ if(jwk_wants_array)
-    return string_to_array(k, Uint8Array);
-  return JSON.parse(k); }
-
-function jwk_object_to_imp(k)
+function jwk_object_to_import(k)
 { if(jwk_wants_array)
     return string_to_array(JSON.stringify(k), Uint8Array);
   return k; }
