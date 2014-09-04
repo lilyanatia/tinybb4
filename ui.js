@@ -44,7 +44,7 @@ function add_comments(id, data)
   { var comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i].comment));
-    if(location.protocol == 'https:' && window.crypto && crypto.subtle && data[i].key) verify_signature(id, i, data[i]);
+    if(window.crypto && crypto.subtle && data[i].key) verify_signature(id, i, data[i]);
     comments.append(comment); }
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form($(this).parent().parent().id); })); }
   
@@ -80,7 +80,7 @@ function reply_form(id)
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
-  if(location.protocol == 'https:' && window.crypto && crypto.subtle)
+  if(window.crypto && crypto.subtle)
   { form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea>'));
     form.append($('<input type="text" disabled id="hash_preview">'));
     form.append($('<input type="button" value="Generate Key" onclick="generate_key()">')); }
