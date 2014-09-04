@@ -143,5 +143,5 @@ function string_to_array(string, type)
 
 function array_to_string(array)
 { var string = '';
-  for(var i = 0; i < string.length; ++i) string += String.fromCharCode(array[i]);
+  for(var i = 0; i < array.length; ++i) string += String.fromCharCode(array[i]);
   return string; }
