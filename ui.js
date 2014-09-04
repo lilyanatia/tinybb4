@@ -1,7 +1,19 @@
 var threads;
+var jwk_wants_array = false;
 
 $(document).ready(function()
 { $('body').append($('<div id="thread_button" class="reply_button">New thread</div>').click(function() { reply_form(-1); }));
+  if(window.crypto && crypto.subtle)
+  { crypto.subtle.generateKey(
+      { name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 256,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: { name: 'SHA-512' } },
+      true, []).then(
+    function(key)
+    { return window.crypto.exportKey('jwk', key.publicKey); }).then(
+    function(exported_key)
+    { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; }); }
   $.getJSON('threads', {}, update_threads); });
 
 function update_threads(data)
@@ -37,7 +49,6 @@ function add_comments(id, data)
 function verify_signature(id, n, data)
 { var signature_data = new Uint8Array(256);
   for(var j = 0; j < 256; ++j) signature_data[j] = data.signature[j];
-  console.log(data.key);
   crypto.subtle.importKey(
     'jwk', data.key,
     { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
@@ -137,7 +148,7 @@ function submit_form()
          function() { alert('Post failed. Please check your input and try again.'); }); }
 
 function string_to_array(string, type)
-{ var array = new type();
+{ var array = new type(string.length);
   for(var i = 0; i < string.length; ++i) array[i] = string.charCodeAt(i);
   return array; }
 
@@ -145,3 +156,23 @@ function array_to_string(array)
 { var string = '';
   for(var i = 0; i < array.length; ++i) string += String.fromCharCode(array[i]);
   return string; }
+
+function jwk_exp_to_string(k)
+{ if(k instanceof ArrayBuffer)
+    return array_to_string(new Uint8Array(k));
+  return JSON.stringify(k); }
+
+function jwk_exp_to_object(k)
+{ if(k instanceof ArrayBuffer)
+    return JSON.parse(array_to_string(new Uint8Array(k)));
+  return k; }
+
+function jwk_string_to_imp(k)
+{ if(jwk_wants_array)
+    return string_to_array(k, Uint8Array);
+  return JSON.parse(k); }
+
+function jwk_object_to_imp(k)
+{ if(jwk_wants_array)
+    return string_to_array(JSON.stringify(k), Uint8Array);
+  return k; }
