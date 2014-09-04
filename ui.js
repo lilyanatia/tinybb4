@@ -57,18 +57,18 @@ function verify_signature(id, n, data)
     { return crypto.subtle.verify(
         { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
           key, signature_data, string_to_array(data.comment, Uint16Array)); },
-    console.error.bind('Unable to import public key.')).then(
+    console.error.bind(console, 'Unable to import public key.')).then(
     function(result)
     { if(result)
       { $('#' + id + '_' + (n + 1)).addClass('valid');
         return crypto.subtle.digest({ name: 'SHA-1' }, string_to_array(data.key.n, Uint8Array)); }
       else
         $('#' + id + '_' + (n + 1)).addClass('invalid'); },
-    console.error.bind('Unable to verify signature.')).then(
+    console.error.bind(console, 'Unable to verify signature.')).then(
     function(digest)
     { if(digest)
       { $('#' + id + '_' + (n + 1)).attr('title', btoa(array_to_string(new Uint8Array(digest)))); }},
-    console.error.bind('Unable to compute hash.')); }
+    console.error.bind(console, 'Unable to compute hash.')); }
 
 function reply_form(id)
 { var container = $('<div id="reply_form">');
@@ -104,7 +104,7 @@ function update_preview()
   crypto.subtle.digest({ name: 'SHA-1' }, string_to_array(key.n, Uint8Array)).then(
   function(digest)
   { $('#hash_preview').val(btoa(array_to_string(new Uint8Array(digest)))); },
-  console.error.bind('Unable to compute hash.')); }
+  console.error.bind(console, 'Unable to compute hash.')); }
 
 function submit_form()
 { var title = $('#title').val();
@@ -126,13 +126,13 @@ function submit_form()
         return crypto.subtle.sign(
           { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
           private_key, string_to_array(comment, Uint16Array)); },
-      console.error.bind('Unable to import private key.')).then(
+      console.error.bind(console, 'Unable to import private key.')).then(
       function(signature_buffer)
       { var signature_data = new Uint8Array(signature_buffer);
         var signature = new Array(256);
         for(var i = 0; i < 256; ++i) signature[i] = signature_data[i];
         return signature; },
-      console.error.bind('Unable to sign.')).then(
+      console.error.bind(console, 'Unable to sign.')).then(
       function(signature)
       { $.post('post',
           { 'title': title, 'thread': thread, 'comment': comment,
