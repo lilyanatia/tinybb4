@@ -35,11 +35,9 @@ function add_comments(id, data)
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form($(this).parent().parent().id); })); }
   
 function verify_signature(id, n, data)
-{ var length = data.comment.length;
-  var comment_data = new Uint16Array(length);
-  for(var j = 0; j < length; ++j) comment_data[j] = data.comment.charCodeAt(j);
-  var signature_data = new Uint8Array(256);
+{ var signature_data = new Uint8Array(256);
   for(var j = 0; j < 256; ++j) signature_data[j] = data.signature[j];
+  console.log(data.key);
   crypto.subtle.importKey(
     'jwk', data.key,
     { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
@@ -47,25 +45,18 @@ function verify_signature(id, n, data)
     function(key)
     { return crypto.subtle.verify(
         { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
-          key, signature_data, comment_data); },
+          key, signature_data, string_to_array(data.comment, Uint16Array)); },
     console.error.bind('Unable to import public key.')).then(
     function(result)
     { if(result)
       { $('#' + id + '_' + (n + 1)).addClass('valid');
-        var k = data.key.n;
-        var length = k.length;
-        var key_data = new Uint8Array(length);
-        for(var j = 0; j < length; ++j) key_data[j] = k.charCodeAt(j);
-        return crypto.subtle.digest({ name: 'SHA-1' }, key_data); }
+        return crypto.subtle.digest({ name: 'SHA-1' }, string_to_array(data.key.n, Uint8Array)); }
       else
         $('#' + id + '_' + (n + 1)).addClass('invalid'); },
     console.error.bind('Unable to verify signature.')).then(
     function(digest)
     { if(digest)
-      { var digest_data = new Uint8Array(digest);
-        var a = '';
-        for(var j = 0; j < 20; ++j) a += String.fromCharCode(digest_data[j]); 
-        $('#' + id + '_' + (n + 1)).attr('title', btoa(a)); }},
+      { $('#' + id + '_' + (n + 1)).attr('title', btoa(array_to_string(new Uint8Array(digest)))); }},
     console.error.bind('Unable to compute hash.')); }
 
 function reply_form(id)
@@ -96,15 +87,9 @@ function generate_key()
 function update_preview()
 { var key = JSON.parse($('#key').val());
   if(!key.n) return;
-  var length = key.n.length;
-  var key_data = new Uint8Array(length);
-  for(var i = 0; i < length; ++i) key_data[i] = key.n.charCodeAt(i);
-  crypto.subtle.digest({ name: 'SHA-1' }, key_data).then(
+  crypto.subtle.digest({ name: 'SHA-1' }, string_to_array(key.n, Uint8Array)).then(
   function(digest)
-  { var digest_data = new Uint8Array(digest);
-    var a = '';
-    for(var i = 0; i < 20; ++i) a += String.fromCharCode(digest_data[i]);
-    $('#hash_preview').val(btoa(a)); },
+  { $('#hash_preview').val(btoa(array_to_string(new Uint8Array(digest)))); },
   console.error.bind('Unable to compute hash.')); }
 
 function submit_form()
@@ -113,10 +98,7 @@ function submit_form()
   var comment = $('#comment').val();
   var key = $('#key').val();
   if(key)
-  { var length = comment.length;
-    var comment_data = new Uint16Array(length);
-    var key_data = JSON.parse(key);
-    for(var i = 0; i < length; ++i) comment_data[i] = comment.charCodeAt(i);
+  { var key_data = JSON.parse(key);
     crypto.subtle.importKey('jwk', key_data,
       { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
       true, ['sign']).then(
@@ -130,7 +112,7 @@ function submit_form()
         key_data.key_ops = ['verify']
         return crypto.subtle.sign(
           { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
-          private_key, comment_data); },
+          private_key, string_to_array(comment, Uint16Array)); },
       console.error.bind('Unable to import private key.')).then(
       function(signature_buffer)
       { var signature_data = new Uint8Array(signature_buffer);
@@ -153,3 +135,13 @@ function submit_form()
   else $.post('post', { 'title': title, 'thread': thread, 'comment': comment },
          function() { location.reload(); }).fail(
          function() { alert('Post failed. Please check your input and try again.'); }); }
+
+function string_to_array(string, type)
+{ var array = new type();
+  for(var i = 0; i < string.length; ++i) array[i] = string.charCodeAt(i);
+  return array; }
+
+function array_to_string(array)
+{ var string = '';
+  for(var i = 0; i < string.length; ++i) string += String.fromCharCode(array[i]);
+  return string; }
