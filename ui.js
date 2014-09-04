@@ -78,7 +78,10 @@ function reply_form(id)
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
-  if(location.protocol == 'https:' && window.crypto && crypto.subtle) form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea><input type="text" disabled id="hash_preview"><input type="button" value="Generate Key" onclick="generate_key()">'));
+  if(location.protocol == 'https:' && window.crypto && crypto.subtle)
+  { form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea>'));
+    form.append($('<input type="text" disabled id="hash_preview">'));
+    form.append($('<input type="button" value="Generate Key" onclick="generate_key()">')); }
   form.append($('<input type="submit" onclick="submit_form()">')); }
 
 function generate_key()
