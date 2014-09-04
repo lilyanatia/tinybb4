@@ -11,9 +11,11 @@ $(document).ready(function()
         hash: { name: 'SHA-512' } },
       true, []).then(
       function(key)
-      { return crypto.subtle.exportKey('jwk', key.publicKey); }).then(
+      { return crypto.subtle.exportKey('jwk', key.publicKey); },
+      console.error.bind(console, 'Unable to generate key.')).then(
       function(exported_key)
-      { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; }); }
+      { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; },
+      console.error.bind(console, 'Unable to export public key.')); }
   $.getJSON('threads', {}, update_threads); });
 
 function update_threads(data)
