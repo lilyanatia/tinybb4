@@ -1,8 +1,11 @@
-var threads;
+var threads = [];
+var thread_watch = [];
 var jwk_wants_array = false;
 
 $(document).ready(function()
-{ $('body').append($('<div id="thread_button" class="reply_button">New thread</div>').click(function() { reply_form(-1); }));
+{ var reply_button = $('<div id="thread_button" class="reply_button">New thread</div>');
+  reply_button.click(function() { reply_form(-1); });
+  $('body').append(reply_button);
   if(window.crypto && crypto.subtle)
   { crypto.subtle.generateKey(
       { name: 'RSASSA-PKCS1-v1_5',
@@ -16,31 +19,52 @@ $(document).ready(function()
       function(exported_key)
       { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; },
       console.error.bind(console, 'Unable to export public key.')); }
-  $.getJSON('threads', {}, update_threads); });
+  var thread_list = $('<div id="thread_list"></div>');
+  $('body').append(thread_list);
+  if(window.EventSource)
+  { var watch = new EventSource('watch.pl');
+    watch.addEventListener('message', function(e) { update_threads(JSON.parse(e.data)); }); }
+  else $.getJSON('threads', {}, update_threads); });
 
 function update_threads(data)
-{ threads = data.reverse(); 
-  show_thread_list(); }
-
-function show_thread_list()
-{ var thread_list = $('<div id="thread_list"></div>');
-  $('body').append(thread_list);
-  for(var i = 0; i < threads.length; ++i)
+{ var old_threads = threads;
+  threads = data;
+  var count = threads.length - old_threads.length;
+  var thread_list = $('#thread_list');
+  for(var i = 0; i < count; ++i)
   { var thread = $('<div>', { 'class': 'thread_title', 'id': threads[i].id });
-    thread_list.append(thread);
+    thread_list.prepend(thread);
     thread.append(threads[i].title); }
   $('.thread_title').click(show_thread); }
 
 function show_thread()
 { var id = this.id;
   $(this).unbind('click', show_thread);
-  this.style.cursor = 'default';
-  $.getJSON('thread/' + id, {}, function(data) { add_comments(id, data); }); }
+  $(this).bind('click', hide_thread); 
+  if(window.EventSource)
+  { thread_watch[id] = new EventSource('watch.pl?thread=' + id);
+    thread_watch[id].addEventListener('message', function(e) { add_comments(id, JSON.parse(e.data)); }); }
+  else $.getJSON('thread/' + id, {}, function(data) { add_comments(id, data); }); 
+}
+
+function hide_thread()
+{ var id = this.id;
+  $(this).children().remove();
+  thread_watch[id].close();
+  $(this).unbind('click', hide_thread);
+  $(this).bind('click', show_thread); }
 
 function add_comments(id, data)
-{ var comments = $('<div class="thread"></div>');
-  $('#' + id).append(comments);
-  for(var i = 0; i < data.length; ++i)
+{ var title = $('#' + id);
+  var comments;
+  if(title.children().length)
+  { comments = title.children().first();
+    comments.children().last().remove(); }
+  else
+  { comments = $('<div class="thread"></div>');
+    $('#' + id).append(comments); }
+  comments.bind('click', function() { return false; });
+  for(var i = comments.children().length; i < data.length; ++i)
   { var comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i].comment));
@@ -144,10 +168,14 @@ function submit_form()
           { 'title': title, 'thread': thread, 'comment': comment,
             'key': JSON.stringify(key_data),
             'signature': JSON.stringify(signature) },
-          function() { location.reload(); }).fail(
+          function()
+          { if(window.EventSource) $('#reply_form').remove();
+            else location.reload(); }).fail(
           function() { alert('Post failed. Please check your input and try again.'); }); }); }
   else $.post('post', { 'title': title, 'thread': thread, 'comment': comment },
-         function() { location.reload(); }).fail(
+         function()
+         { if(window.EventSource) $('#reply_form').remove();
+           else location.reload(); }).fail(
          function() { alert('Post failed. Please check your input and try again.'); }); }
 
 function string_to_array(string, type)
