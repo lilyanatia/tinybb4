@@ -46,7 +46,7 @@ function add_comments(id, data)
     comment.append($('<div>').text(data[i].comment));
     if(window.crypto && crypto.subtle && data[i].key) verify_signature(id, i, data[i]);
     comments.append(comment); }
-  comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form($(this).parent().parent().id); })); }
+  comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form(id); })); }
   
 function verify_signature(id, n, data)
 { var signature_data = new Uint8Array(256);
