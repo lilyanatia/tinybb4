@@ -14,3 +14,5 @@ input, textarea { display: block; width: 75%; margin: 0.5em auto; }
 blockquote { margin: 0; color: #060; }
 #thread_button { position: fixed; top: 0; right: 0; background: #eee; }
 .reply_button { display: inline; cursor: pointer; border: 1px solid #060; }
+#close { position: absolute; right: 1em; height: 1em; width: 1em; text-align: center; border: 2px outset red; color: red; cursor: default; }
+#close:active { border: 2px inset red; }

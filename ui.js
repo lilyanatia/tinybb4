@@ -77,6 +77,9 @@ function reply_form(id)
   $('body').append(container);
   var form = $('<form onsubmit="return false;"></form>');
   container.append(form);
+  var close_button = $('<div id="close">×</div>');
+  close_button.click(function() { $('#reply_form').remove(); });
+  form.append(close_button);
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
