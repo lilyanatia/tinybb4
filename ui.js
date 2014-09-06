@@ -112,9 +112,10 @@ function submit_form()
 { var title = $('#title').val();
   var thread = $('#thread').val();
   var comment = $('#comment').val();
-  var key_data = JSON.parse($('#key').val());
+  var key = $('#key').val();
   if(key)
-  { crypto.subtle.importKey('jwk', jwk_object_to_import(key_data),
+  { var key_data = JSON.parse(key);
+    crypto.subtle.importKey('jwk', jwk_object_to_import(key_data),
       { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
       true, ['sign']).then(
       function(private_key)
