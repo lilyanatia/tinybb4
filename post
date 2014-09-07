@@ -5,6 +5,7 @@
 use strict;
 use open ':utf8';
 use Fcntl qw(:flock);
+use Encode;
 use JSON;
 use CGI;
 $CGI::POST_MAX = 4096;
@@ -15,6 +16,8 @@ my $thread_json;
 if($query->request_method() != 'POST') { print $query->header(-status => '405 Method Not Allowed'); exit; }
 $query->import_names('P');
 bad_request() unless length($P::comment) > 0;
+$P::comment = decode utf8=>$P::comment;
+$P::title = decode utf8=>$P::title;
 $P::thread = $P::thread + 0;
 if($P::thread < 0) { $P::thread = create_thread($P::title, $P::comment, $P::key, $P::signature); }
 else { add_post($P::thread, $P::comment, $P::key, $P::signature); }
