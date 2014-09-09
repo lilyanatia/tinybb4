@@ -1,9 +1,8 @@
-var threads = [];
-var thread_watch = [];
-var jwk_wants_array = false;
+var threads = [], thread_watch = [], jwk_wants_array = false;
 
 $(document).ready(function()
-{ var reply_button = $('<div id="thread_button" class="reply_button">New thread</div>');
+{ var reply_button = $('<div id="thread_button" class="reply_button">New thread</div>'),
+      thread_list = $('<div id="thread_list"></div>');
   reply_button.click(function() { reply_form(-1); });
   $('body').append(reply_button);
   if(window.crypto && crypto.subtle)
@@ -19,7 +18,6 @@ $(document).ready(function()
       function(exported_key)
       { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; },
       console.error.bind(console, 'Unable to export public key.')); }
-  var thread_list = $('<div id="thread_list"></div>');
   $('body').append(thread_list);
   if(window.EventSource)
   { var watch = new EventSource('watch.pl');
@@ -27,11 +25,11 @@ $(document).ready(function()
   else $.getJSON('threads', {}, update_threads); });
 
 function update_threads(data)
-{ var old_threads = threads;
+{ var old_threads = threads,
+      count = data.length - old_threads.length,
+      thread_list = $('#thread_list'), i;
   threads = data;
-  var count = threads.length - old_threads.length;
-  var thread_list = $('#thread_list');
-  for(var i = 0; i < count; ++i)
+  for(i = 0; i < count; ++i)
   { var thread = $('<div>', { 'class': 'thread_title', 'id': threads[i].id });
     thread_list.prepend(thread);
     thread.append(threads[i].title); }
@@ -55,8 +53,8 @@ function hide_thread()
   $(this).bind('click', show_thread); }
 
 function add_comments(id, data)
-{ var title = $('#' + id);
-  var comments;
+{ var title = $('#' + id),
+      comments, i;
   if(title.children().length)
   { comments = title.children().first();
     comments.children().last().remove(); }
@@ -64,7 +62,7 @@ function add_comments(id, data)
   { comments = $('<div class="thread"></div>');
     $('#' + id).append(comments); }
   comments.bind('click', function() { return false; });
-  for(var i = comments.children().length; i < data.length; ++i)
+  for(i = comments.children().length; i < data.length; ++i)
   { var comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i].comment));
@@ -73,8 +71,8 @@ function add_comments(id, data)
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form(id); })); }
   
 function verify_signature(id, n, data)
-{ var signature_data = new Uint8Array(256);
-  for(var j = 0; j < 256; ++j) signature_data[j] = data.signature[j];
+{ var signature_data = new Uint8Array(256), i;
+  for(i = 0; i < 256; ++i) signature_data[i] = data.signature[i];
   crypto.subtle.importKey(
     'jwk', jwk_object_to_import(data.key),
     { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
@@ -97,11 +95,11 @@ function verify_signature(id, n, data)
     console.error.bind(console, 'Unable to compute hash.')); }
 
 function reply_form(id)
-{ var container = $('<div id="reply_form">');
+{ var container = $('<div id="reply_form">'),
+      form = $('<form onsubmit="return false;"></form>'),
+      close_button = $('<div id="close">×</div>');
   $('body').append(container);
-  var form = $('<form onsubmit="return false;"></form>');
   container.append(form);
-  var close_button = $('<div id="close">×</div>');
   close_button.click(function() { $('#reply_form').remove(); });
   form.append(close_button);
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
@@ -136,10 +134,10 @@ function update_preview()
   console.error.bind(console, 'Unable to compute hash.')); }
 
 function submit_form()
-{ var title = $('#title').val();
-  var thread = $('#thread').val();
-  var comment = $('#comment').val();
-  var key = $('#key').val();
+{ var title = $('#title').val(),
+      thread = $('#thread').val(),
+      comment = $('#comment').val(),
+      key = $('#key').val();
   if(key)
   { var key_data = JSON.parse(key);
     crypto.subtle.importKey('jwk', jwk_object_to_import(key_data),
@@ -158,13 +156,13 @@ function submit_form()
           private_key, string_to_array(comment, Uint16Array)); },
       console.error.bind(console, 'Unable to import private key.')).then(
       function(signature_buffer)
-      { var signature_data = new Uint8Array(signature_buffer);
-        var signature = new Array(256);
-        for(var i = 0; i < 256; ++i) signature[i] = signature_data[i];
+      { var signature_data = new Uint8Array(signature_buffer),
+            signature = new Array(256), i;
+        for(i = 0; i < 256; ++i) signature[i] = signature_data[i];
         return signature; },
       console.error.bind(console, 'Unable to sign.')).then(
       function(signature)
-      { $.post('post',
+      { $.post('post.pl',
           { 'title': title, 'thread': thread, 'comment': comment,
             'key': JSON.stringify(key_data),
             'signature': JSON.stringify(signature) },
@@ -172,20 +170,20 @@ function submit_form()
           { if(window.EventSource) $('#reply_form').remove();
             else location.reload(); }).fail(
           function() { alert('Post failed. Please check your input and try again.'); }); }); }
-  else $.post('post', { 'title': title, 'thread': thread, 'comment': comment },
+  else $.post('post.pl', { 'title': title, 'thread': thread, 'comment': comment },
          function()
          { if(window.EventSource) $('#reply_form').remove();
            else location.reload(); }).fail(
          function() { alert('Post failed. Please check your input and try again.'); }); }
 
 function string_to_array(string, type)
-{ var array = new type(string.length);
-  for(var i = 0; i < string.length; ++i) array[i] = string.charCodeAt(i);
+{ var array = new type(string.length), i;
+  for(i = 0; i < string.length; ++i) array[i] = string.charCodeAt(i);
   return array; }
 
 function array_to_string(array)
-{ var string = '';
-  for(var i = 0; i < array.length; ++i) string += String.fromCharCode(array[i]);
+{ var string = '', i;
+  for(i = 0; i < array.length; ++i) string += String.fromCharCode(array[i]);
   return string; }
 
 function jwk_export_to_string(k)

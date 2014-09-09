@@ -7,10 +7,10 @@ use open ':utf8';
 use Fcntl qw(:flock);
 use Encode;
 use JSON;
-use CGI;
+use CGI::Compress::Gzip;
 $CGI::POST_MAX = 4096;
 
-my $query = new CGI;
+my $query = CGI::Compress::Gzip->new;
 my $thread_json;
 
 if($query->request_method() != 'POST') { print $query->header(-status => '405 Method Not Allowed'); exit; }
