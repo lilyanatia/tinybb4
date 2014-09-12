@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use open ':utf8';
-use CGI::Compress::Gzip;
+use CGI;
 use Linux::Inotify2;
 use Fcntl ':flock';
 use Time::HiRes qw/time sleep/;
@@ -9,7 +9,7 @@ use Time::HiRes qw/time sleep/;
 BEGIN { $| = 1; }
 
 my @stat;
-my $query = CGI::Compress::Gzip->new;
+my $query = CGI->new;
 my $thread = $query->param('thread');
 my $filename = 'threads';
 
