@@ -2,7 +2,6 @@ body { background: #ba9 url('ba.png') fixed; color: #000; background-image: imag
 #thread_list, #reply_form { border: 4px double black; padding: 0.5em; margin: 0.5em; background: #cfc; }
 #reply_form { position: fixed; right: 25%; top: 1em; width: 50%; text-align: center; }
 input, textarea { display: block; width: 75%; margin: 0.5em auto; }
-#bump { display: inline; width: auto; }
 .thread_title { cursor: pointer; }
 .thread_title:nth-child(even) { background: #beb; }
 .thread { background: #eee; cursor: default; }
@@ -11,7 +10,6 @@ input, textarea { display: block; width: 75%; margin: 0.5em auto; }
 .invalid { color: #ebb; }
 .valid { color: #070; }
 .post_number { font-size: xx-large; padding-right: 0.5em; }
-blockquote { margin: 0; color: #060; }
 #thread_button { position: fixed; top: 0; right: 0; background: #eee; }
 .reply_button { display: inline; cursor: pointer; border: 1px solid #060; }
 #close { position: absolute; right: 1em; height: 1em; width: 1em; text-align: center; border: 2px outset red; color: red; cursor: default; }
