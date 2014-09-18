@@ -1,8 +1,46 @@
-var threads = [], thread_watch = [], jwk_wants_array = false;
+var threads = [], thread_watch = [], jwk_wants_array = false, algorithms =
+{ 'RSA':
+  { 'RS1':
+    { name: 'RSASSA-PKCS1-v1_5',
+      hash: { name: 'SHA-1' } },
+    'RS256':
+    { name: 'RSASSA-PKCS1-v1_5',
+      hash: { name: 'SHA-256' } },
+    'RS384':
+    { name: 'RSASSA-PKCS1-v1_5',
+      hash: { name: 'SHA-512' } },
+    'RS512':
+    { name: 'RSASSA-PKCS1-v1_5',
+      hash: { name: 'SHA-512' } },
+    /* RSA-PSS disabled until browsers support it.
+    'PS256':
+    { name: 'RSA-PSS',
+      hash: { name: 'SHA-256' } },
+    'PS384':
+    { name: 'RSA-PSS',
+      hash: { name: 'SHA-384' } },
+    'PS512':
+    { name: 'RSA-PSS',
+      hash: { name: 'SHA-512' } } */ },
+  /* ECDSA disabled until browsers support it.
+  'EC':
+  { 'ES256':
+    { name: 'ECDSA',
+      namedCurve: 'P-256',
+      hash: { name: 'SHA-256' } },
+    'ES384':
+    { name: 'ECDSA',
+      namedCurve: 'P-384',
+      hash: { name: 'SHA-384' } },
+    'ES512':
+    { name: 'ECDSA',
+      namedCurve: 'P-521',
+      hash: { name: 'SHA-512' } } } */ };
 
 $(document).ready(function()
-{ var reply_button = $('<div id="thread_button" class="reply_button">New thread</div>'),
-      thread_list = $('<div id="thread_list"></div>');
+{ var watch,
+    reply_button = $('<div id="thread_button" class="reply_button">New thread</div>'),
+    thread_list = $('<div id="thread_list"></div>');
   reply_button.click(function() { reply_form(-1); });
   $('body').append(reply_button);
   if(window.crypto && crypto.subtle)
@@ -10,7 +48,7 @@ $(document).ready(function()
       { name: 'RSASSA-PKCS1-v1_5',
         modulusLength: 256,
         publicExponent: new Uint8Array([1, 0, 1]),
-        hash: { name: 'SHA-512' } },
+        hash: { name: 'SHA-1' } },
       true, []).then(
       function(key)
       { return crypto.subtle.exportKey('jwk', key.publicKey); },
@@ -20,17 +58,18 @@ $(document).ready(function()
       console.error.bind(console, 'Unable to export public key.')); }
   $('body').append(thread_list);
   if(window.EventSource)
-  { var watch = new EventSource('watch.pl');
-    watch.addEventListener('message', function(e) { update_threads(JSON.parse(e.data)); }); }
+  { watch = new EventSource('watch.pl');
+    watch.addEventListener('message', function(e)
+    { update_threads(JSON.parse(e.data)); }); }
   else $.getJSON('threads', {}, update_threads); });
 
 function update_threads(data)
-{ var old_threads = threads,
+{ var old_threads = threads, thread, i,
       count = data.length - old_threads.length,
-      thread_list = $('#thread_list'), i;
+      thread_list = $('#thread_list');
   threads = data;
   for(i = 0; i < count; ++i)
-  { var thread = $('<div>', { 'class': 'thread_title', 'id': threads[i].id });
+  { thread = $('<div>', { 'class': 'thread_title', 'id': threads[i].id });
     thread_list.prepend(thread);
     thread.append(threads[i].title); }
   $('.thread_title').click(show_thread); }
@@ -41,8 +80,10 @@ function show_thread()
   $(this).bind('click', hide_thread); 
   if(window.EventSource)
   { thread_watch[id] = new EventSource('watch.pl?thread=' + id);
-    thread_watch[id].addEventListener('message', function(e) { add_comments(id, JSON.parse(e.data)); }); }
-  else $.getJSON('thread/' + id, {}, function(data) { add_comments(id, data); }); 
+    thread_watch[id].addEventListener('message', function(e)
+    { add_comments(id, JSON.parse(e.data)); }); }
+  else $.getJSON('thread/' + id, {}, function(data)
+  { add_comments(id, data); }); 
 }
 
 function hide_thread()
@@ -54,7 +95,7 @@ function hide_thread()
 
 function add_comments(id, data)
 { var title = $('#' + id),
-      comments, i;
+      comments, i, comment;
   if(title.children().length)
   { comments = title.children().first();
     comments.children().last().remove(); }
@@ -63,35 +104,37 @@ function add_comments(id, data)
     $('#' + id).append(comments); }
   comments.bind('click', function() { return false; });
   for(i = comments.children().length; i < data.length; ++i)
-  { var comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
+  { comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i].comment));
-    if(window.crypto && crypto.subtle && data[i].key) verify_signature(id, i, data[i]);
+    if(window.crypto && crypto.subtle && data[i].key)
+      verify_signature(id, i, data[i]);
     comments.append(comment); }
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form(id); })); }
   
 function verify_signature(id, n, data)
-{ var signature_data = new Uint8Array(256), i;
+{ var signature_data = new Uint8Array(256), i,
+    algorithm = algorithms[data.key.kty][data.key.alg];
   for(i = 0; i < 256; ++i) signature_data[i] = data.signature[i];
   crypto.subtle.importKey(
-    'jwk', jwk_object_to_import(data.key),
-    { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
-    true, ['verify']).then(
+    'jwk', jwk_object_to_import(data.key), algorithm, true, ['verify']).then(
     function(key)
     { return crypto.subtle.verify(
-        { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
-          key, signature_data, string_to_array(data.comment, Uint16Array)); },
+        algorithm, key, signature_data,
+        string_to_array(data.comment, Uint16Array)); },
     console.error.bind(console, 'Unable to import public key.')).then(
     function(result)
     { if(result)
       { $('#' + id + '_' + (n + 1)).addClass('valid');
-        return crypto.subtle.digest({ name: 'SHA-1' }, string_to_array(data.key.n, Uint8Array)); }
+        return crypto.subtle.digest({ name: 'SHA-1' },
+          string_to_array(data.key.n, Uint8Array)); }
       else
         $('#' + id + '_' + (n + 1)).addClass('invalid'); },
     console.error.bind(console, 'Unable to verify signature.')).then(
     function(digest)
     { if(digest)
-      { $('#' + id + '_' + (n + 1)).attr('title', btoa(array_to_string(new Uint8Array(digest)))); }},
+      { $('#' + id + '_' + (n + 1)).attr('title',
+          btoa(array_to_string(new Uint8Array(digest)))); }},
     console.error.bind(console, 'Unable to compute hash.')); }
 
 function reply_form(id)
@@ -108,16 +151,16 @@ function reply_form(id)
   if(window.crypto && crypto.subtle)
   { form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea>'));
     form.append($('<input type="text" disabled id="hash_preview">'));
-    form.append($('<input type="button" value="Generate Key" onclick="generate_key()">')); }
+    form.append($('<input type="button" value="Generate Key" onclick="generate_key(algorithms.RSA.RSA256)">')); }
   form.append($('<input type="submit" onclick="submit_form()">')); }
 
-function generate_key()
-{ crypto.subtle.generateKey(
-   { name: 'RSASSA-PKCS1-v1_5',
-     modulusLength: 2048,
-     publicExponent: new Uint8Array([1, 0, 1]),
-     hash: { name: 'SHA-512' } },
-   true, ['sign', 'verify']).then(
+function generate_key(algorithm)
+{ if(algorithm.name.startsWith('RSA'))
+  { if(!algorithm.publicExponent)
+      algorithm.publicExponent = new Uint8Array([1, 0, 1]);
+    if(!algorithm.modulusLength)
+      algorithm.modulusLength = 2048; }
+  crypto.subtle.generateKey(algorithm, true, ['sign', 'verify']).then(
    function(key)
    { return crypto.subtle.exportKey('jwk', key.privateKey); },
    console.error.bind(console, 'Unable to generate key.')).then(
@@ -128,7 +171,8 @@ function generate_key()
 function update_preview()
 { var key = JSON.parse($('#key').val());
   if(!key.n) return;
-  crypto.subtle.digest({ name: 'SHA-1' }, string_to_array(key.n, Uint8Array)).then(
+  crypto.subtle.digest({ name: 'SHA-1' },
+    string_to_array(key.n, Uint8Array)).then(
   function(digest)
   { $('#hash_preview').val(btoa(array_to_string(new Uint8Array(digest)))); },
   console.error.bind(console, 'Unable to compute hash.')); }
@@ -137,11 +181,12 @@ function submit_form()
 { var title = $('#title').val(),
       thread = $('#thread').val(),
       comment = $('#comment').val(),
-      key = $('#key').val();
+      key = $('#key').val(),
+      key_data;
   if(key)
-  { var key_data = JSON.parse(key);
-    crypto.subtle.importKey('jwk', jwk_object_to_import(key_data),
-      { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
+  { key_data = JSON.parse(key),
+      algorithm = algorithms[key_data.kty][key_data.alg];
+    crypto.subtle.importKey('jwk', jwk_object_to_import(key_data), algorithm,
       true, ['sign']).then(
       function(private_key)
       { delete key_data.d;
@@ -151,9 +196,8 @@ function submit_form()
         delete key_data.q;
         delete key_data.qi;
         key_data.key_ops = ['verify']
-        return crypto.subtle.sign(
-          { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-512' }},
-          private_key, string_to_array(comment, Uint16Array)); },
+        return crypto.subtle.sign( algorithm, private_key,
+          string_to_array(comment, Uint16Array)); },
       console.error.bind(console, 'Unable to import private key.')).then(
       function(signature_buffer)
       { var signature_data = new Uint8Array(signature_buffer),

@@ -34,6 +34,10 @@ sub thread_path($)
 
 sub create_thread($$$$)
 { my ($title, $comment, $key, $signature) = @_;
+  if($key)
+  { $key = decode_json($key);
+    bad_request() unless
+      $key->{'kty'} == 'RSA' && $key->{'alg'} =~ /^RS[0-9]+$/; }
   bad_request() unless $title;
   open my $threads_file, '+<', 'threads';
   flock $threads_file, LOCK_EX;
@@ -49,7 +53,7 @@ sub create_thread($$$$)
   $thread_json = encode_json(
     [ $key ?
       { 'comment' => $comment,
-        'key' => decode_json($key),
+        'key' => $key,
         'signature' => decode_json($signature) } :
       { 'comment' => $comment }
     ]);
