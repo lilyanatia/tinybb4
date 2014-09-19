@@ -1,4 +1,5 @@
-var threads = [], thread_watch = [], jwk_wants_array = false, algorithms =
+var threads = [], thread_watch = [], jwk_wants_array = false,
+  vowels = 'aeiouy', consonants = 'bcdfghklmnprstvzx', algorithms =
 { 'RSA':
   { 'RS1':
     { name: 'RSASSA-PKCS1-v1_5',
@@ -113,28 +114,32 @@ function add_comments(id, data)
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form(id); })); }
   
 function verify_signature(id, n, data)
-{ var signature_data = new Uint8Array(256), i,
+{ var signature_data = new Uint8Array(256), i, key,
     algorithm = algorithms[data.key.kty][data.key.alg];
   for(i = 0; i < 256; ++i) signature_data[i] = data.signature[i];
   crypto.subtle.importKey(
     'jwk', jwk_object_to_import(data.key), algorithm, true, ['verify']).then(
-    function(key)
-    { return crypto.subtle.verify(
+    function(k)
+    { key = k;
+      return crypto.subtle.verify(
         algorithm, key, signature_data,
         string_to_array(data.comment, Uint16Array)); },
     console.error.bind(console, 'Unable to import public key.')).then(
     function(result)
     { if(result)
       { $('#' + id + '_' + (n + 1)).addClass('valid');
-        return crypto.subtle.digest({ name: 'SHA-1' },
-          string_to_array(data.key.n, Uint8Array)); }
+        return crypto.subtle.exportKey('jwk', key); }
       else
         $('#' + id + '_' + (n + 1)).addClass('invalid'); },
     console.error.bind(console, 'Unable to verify signature.')).then(
+    function(exported)
+    { console.log(exported);return crypto.subtle.digest(
+      { name: 'SHA-256' }, jwk_export_to_array(exported)); },
+    console.error.bind(console, 'Unable to export key.')).then(
     function(digest)
     { if(digest)
       { $('#' + id + '_' + (n + 1)).attr('title',
-          btoa(array_to_string(new Uint8Array(digest)))); }},
+          bubble_babble(new Uint8Array(digest))); }},
     console.error.bind(console, 'Unable to compute hash.')); }
 
 function reply_form(id)
@@ -151,7 +156,7 @@ function reply_form(id)
   if(window.crypto && crypto.subtle)
   { form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea>'));
     form.append($('<input type="text" disabled id="hash_preview">'));
-    form.append($('<input type="button" value="Generate Key" onclick="generate_key(algorithms.RSA.RSA256)">')); }
+    form.append($('<input type="button" value="Generate Key" onclick="generate_key(algorithms.RSA.RS256)">')); }
   form.append($('<input type="submit" onclick="submit_form()">')); }
 
 function generate_key(algorithm)
@@ -170,12 +175,26 @@ function generate_key(algorithm)
 
 function update_preview()
 { var key = JSON.parse($('#key').val());
-  if(!key.n) return;
-  crypto.subtle.digest({ name: 'SHA-1' },
-    string_to_array(key.n, Uint8Array)).then(
-  function(digest)
-  { $('#hash_preview').val(btoa(array_to_string(new Uint8Array(digest)))); },
-  console.error.bind(console, 'Unable to compute hash.')); }
+  delete key.d;
+  delete key.dp;
+  delete key.dq;
+  delete key.p;
+  delete key.q;
+  delete key.qi;
+  key.key_ops = ['verify'];
+  crypto.subtle.importKey( 'jwk', jwk_object_to_import(key),
+    algorithms[key.kty][key.alg], true, ['verify']).then(
+    function(k)
+    { key = k;
+      return crypto.subtle.exportKey('jwk', key); },
+    console.error.bind(console, 'Unable to import key.')).then(
+    function(exported)
+    { if(exported) return crypto.subtle.digest(
+      { name: 'SHA-256' }, jwk_export_to_array(exported)); },
+    console.error.bind(console, 'Unable to export key.')).then(
+    function(digest)
+    { $('#hash_preview').val(bubble_babble(new Uint8Array(digest))); },
+    console.error.bind(console, 'Unable to compute hash.')); }
 
 function submit_form()
 { var title = $('#title').val(),
@@ -231,11 +250,37 @@ function array_to_string(array)
   return string; }
 
 function jwk_export_to_string(k)
-{ if(k instanceof ArrayBuffer)
-    return array_to_string(new Uint8Array(k));
+{ if(k instanceof ArrayBuffer) return array_to_string(new Uint8Array(k));
   return JSON.stringify(k); }
 
+function jwk_export_to_array(k)
+{ if(k instanceof ArrayBuffer) return k;
+  return string_to_array(JSON.stringify(k), Uint8Array); }
+
 function jwk_object_to_import(k)
-{ if(jwk_wants_array)
-    return string_to_array(JSON.stringify(k), Uint8Array);
+{ if(jwk_wants_array) return string_to_array(JSON.stringify(k), Uint8Array);
   return k; }
+
+function op(r, c)
+{ var x = (((r >> 6) & 3) + c) % 6,
+      y = (r >> 2) & 15,
+      z = ((r & 3) + Math.floor(c / 6)) % 6;
+  return vowels.charAt(x) + consonants.charAt(y) + vowels.charAt(z); }
+
+function ep(c)
+{ var x = c % 6,
+      y = Math.floor(c / 6);
+  return vowels.charAt(x) + 'x' + vowels.charAt(y); }
+
+function nc(c, a, b)
+{ return ((c * 5) + (a * 7) + b) % 36; }
+
+function bubble_babble(a)
+{ var s = 'x', c = 1, l = a.length, i;
+  for(i = 0; i + 1 < l; i += 2)
+  { s += op(a[i], c);
+    s += consonants.charAt((a[i + 1] >> 4) & 15) + '-' +
+      consonants.charAt(a[i + 1]);
+    c = nc(c, a[i], a[i + 1]); }
+  s += (i < l ? op(a[i], c) : ep(c)) + 'x';
+  return s; }
