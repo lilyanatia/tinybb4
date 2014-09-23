@@ -1,4 +1,5 @@
 var threads = [], thread_watch = [], jwk_wants_array = false,
+  has_crypto = window.crypto && crypto.subtle,
   vowels = 'aeiouy', consonants = 'bcdfghklmnprstvzx', algorithms =
 { 'RSA':
   { 'RS1':
@@ -44,7 +45,7 @@ $(document).ready(function()
     thread_list = $('<div id="thread_list"></div>');
   reply_button.click(function() { reply_form(-1); });
   $('body').append(reply_button);
-  if(window.crypto && crypto.subtle)
+  if(has_crypto)
   { crypto.subtle.generateKey(
       { name: 'RSASSA-PKCS1-v1_5',
         modulusLength: 256,
@@ -53,10 +54,12 @@ $(document).ready(function()
       true, []).then(
       function(key)
       { return crypto.subtle.exportKey('jwk', key.publicKey); },
-      console.error.bind(console, 'Unable to generate key.')).then(
+      function(e)
+      { console.error.bind(console, 'Unable to generate key:\n')(e);
+      has_crypto = false; }).then(
       function(exported_key)
       { if(exported_key instanceof ArrayBuffer) jwk_wants_array = true; },
-      console.error.bind(console, 'Unable to export public key.')); }
+      console.error.bind(console, 'Unable to export public key:\n')); }
   $('body').append(thread_list);
   if(window.EventSource)
   { watch = new EventSource('watch.pl');
@@ -108,7 +111,7 @@ function add_comments(id, data)
   { comment = $('<div>', { 'class': 'comment', 'id': id + '_' + (i + 1) });
     comment.append($('<div class="post_number">' + (i + 1) + '</div>'));
     comment.append($('<div>').text(data[i].comment));
-    if(window.crypto && crypto.subtle && data[i].key)
+    if(has_crypto && data[i].key)
       verify_signature(id, i, data[i]);
     comments.append(comment); }
   comments.append($('<div class="reply_button">Reply</div>').click(function() { reply_form(id); })); }
@@ -124,23 +127,23 @@ function verify_signature(id, n, data)
       return crypto.subtle.verify(
         algorithm, key, signature_data,
         string_to_array(data.comment, Uint16Array)); },
-    console.error.bind(console, 'Unable to import public key.')).then(
+    console.error.bind(console, 'Unable to import public key:\n')).then(
     function(result)
     { if(result)
       { $('#' + id + '_' + (n + 1)).addClass('valid');
         return crypto.subtle.exportKey('jwk', key); }
       else
         $('#' + id + '_' + (n + 1)).addClass('invalid'); },
-    console.error.bind(console, 'Unable to verify signature.')).then(
+    console.error.bind(console, 'Unable to verify signature:\n')).then(
     function(exported)
-    { console.log(exported);return crypto.subtle.digest(
+    { return crypto.subtle.digest(
       { name: 'SHA-256' }, jwk_export_to_array(exported)); },
-    console.error.bind(console, 'Unable to export key.')).then(
+    console.error.bind(console, 'Unable to export key:\n')).then(
     function(digest)
     { if(digest)
       { $('#' + id + '_' + (n + 1)).attr('title',
           bubble_babble(new Uint8Array(digest))); }},
-    console.error.bind(console, 'Unable to compute hash.')); }
+    console.error.bind(console, 'Unable to compute hash:\n')); }
 
 function reply_form(id)
 { var container = $('<div id="reply_form">'),
@@ -153,11 +156,11 @@ function reply_form(id)
   form.append($('<input>', { 'type': 'hidden', 'id': 'thread', 'value': id }));
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
-  if(window.crypto && crypto.subtle)
+  if(has_crypto)
   { form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea>'));
     form.append($('<input type="text" disabled id="hash_preview">'));
     form.append($('<input type="button" value="Generate Key" onclick="generate_key(algorithms.RSA.RS256)">')); }
-  form.append($('<input type="submit" onclick="submit_form()">')); }
+  form.append($('<input type="submit" id="submit_button" onclick="submit_form()">')); }
 
 function generate_key(algorithm)
 { if(algorithm.name.startsWith('RSA'))
@@ -168,7 +171,7 @@ function generate_key(algorithm)
   crypto.subtle.generateKey(algorithm, true, ['sign', 'verify']).then(
    function(key)
    { return crypto.subtle.exportKey('jwk', key.privateKey); },
-   console.error.bind(console, 'Unable to generate key.')).then(
+   console.error.bind(console, 'Unable to generate key:\n')).then(
    function(exported_key)
    { $('#key').val(jwk_export_to_string(exported_key));
      update_preview(); }); }
@@ -187,14 +190,14 @@ function update_preview()
     function(k)
     { key = k;
       return crypto.subtle.exportKey('jwk', key); },
-    console.error.bind(console, 'Unable to import key.')).then(
+    console.error.bind(console, 'Unable to import key:\n')).then(
     function(exported)
     { if(exported) return crypto.subtle.digest(
       { name: 'SHA-256' }, jwk_export_to_array(exported)); },
-    console.error.bind(console, 'Unable to export key.')).then(
+    console.error.bind(console, 'Unable to export key:\n')).then(
     function(digest)
     { $('#hash_preview').val(bubble_babble(new Uint8Array(digest))); },
-    console.error.bind(console, 'Unable to compute hash.')); }
+    console.error.bind(console, 'Unable to compute hash:\n')); }
 
 function submit_form()
 { var title = $('#title').val(),
@@ -202,42 +205,58 @@ function submit_form()
       comment = $('#comment').val(),
       key = $('#key').val(),
       key_data;
+  $('#submit_button').attr('disabled', true);
   if(key)
   { key_data = JSON.parse(key),
       algorithm = algorithms[key_data.kty][key_data.alg];
     crypto.subtle.importKey('jwk', jwk_object_to_import(key_data), algorithm,
       true, ['sign']).then(
       function(private_key)
-      { delete key_data.d;
-        delete key_data.dp;
-        delete key_data.dq;
-        delete key_data.p;
-        delete key_data.q;
-        delete key_data.qi;
-        key_data.key_ops = ['verify']
-        return crypto.subtle.sign( algorithm, private_key,
-          string_to_array(comment, Uint16Array)); },
-      console.error.bind(console, 'Unable to import private key.')).then(
+      { if(private_key)
+	{ delete key_data.d;
+          delete key_data.dp;
+          delete key_data.dq;
+          delete key_data.p;
+          delete key_data.q;
+          delete key_data.qi;
+          key_data.key_ops = ['verify']
+          return crypto.subtle.sign( algorithm, private_key,
+            string_to_array(comment, Uint16Array)); }},
+      function(e)
+      { var msg = 'Unable to import private key:\n';
+        console.error.bind(console, msg)(e);
+        alert(msg + e);
+        $('#submit_button').attr('disabled', false); }).then(
       function(signature_buffer)
-      { var signature_data = new Uint8Array(signature_buffer),
+      { if(signature_buffer)
+	{ var signature_data = new Uint8Array(signature_buffer),
             signature = new Array(256), i;
-        for(i = 0; i < 256; ++i) signature[i] = signature_data[i];
-        return signature; },
-      console.error.bind(console, 'Unable to sign.')).then(
+          for(i = 0; i < 256; ++i) signature[i] = signature_data[i];
+          return signature; }},
+      function(e)
+      { var msg = 'Unable to sign post:\n';
+        console.error.bind(console, msg)(e);
+        alert(msg + e);
+        $('#submit_button').attr('disabled', false); }).then(
       function(signature)
-      { $.post('post.pl',
-          { 'title': title, 'thread': thread, 'comment': comment,
-            'key': JSON.stringify(key_data),
-            'signature': JSON.stringify(signature) },
-          function()
-          { if(window.EventSource) $('#reply_form').remove();
-            else location.reload(); }).fail(
-          function() { alert('Post failed. Please check your input and try again.'); }); }); }
+      { if(signature)
+        { $.post('post.pl',
+            { 'title': title, 'thread': thread, 'comment': comment,
+              'key': JSON.stringify(key_data),
+              'signature': JSON.stringify(signature) },
+            function()
+            { if(window.EventSource) $('#reply_form').remove();
+              else location.reload(); }).fail(
+            function()
+            { alert('Post failed. Please check your input and try again.');
+              $('#submit_botton').attr('disabled', false); }); }}); }
   else $.post('post.pl', { 'title': title, 'thread': thread, 'comment': comment },
          function()
          { if(window.EventSource) $('#reply_form').remove();
            else location.reload(); }).fail(
-         function() { alert('Post failed. Please check your input and try again.'); }); }
+         function()
+         { alert('Post failed. Please check your input and try again.');
+           $('#submit_button').attr('disabled', false); }); }
 
 function string_to_array(string, type)
 { var array = new type(string.length), i;
