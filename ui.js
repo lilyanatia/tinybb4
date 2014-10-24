@@ -1,5 +1,5 @@
 var threads = [], thread_watch = [], jwk_wants_array = false,
-  has_crypto = window.crypto && crypto.subtle,
+  has_crypto = window.crypto && (crypto.subtle || (crypto.subtle = crypto.webkitSubtle)),
   vowels = 'aeiouy', consonants = 'bcdfghklmnprstvzx', algorithms =
 { 'RSA':
   { 'RS1':
