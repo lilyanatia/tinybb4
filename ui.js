@@ -147,8 +147,10 @@ function verify_signature(id, n, data)
 
 function reply_form(id)
 { var container = $('<div id="reply_form">'),
-      form = $('<form onsubmit="return false;"></form>'),
-      close_button = $('<div id="close">×</div>');
+      form = $('<form></form>'),
+      close_button = $('<div id="close">×</div>'),
+      key_input, generate_button, submit_button;
+  form.submit(function(){ return false; });
   $('body').append(container);
   container.append(form);
   close_button.click(function() { $('#reply_form').remove(); });
@@ -157,10 +159,17 @@ function reply_form(id)
   if(id < 0) form.append($('<input id="title" required placeholder="Title">'));
   form.append($('<textarea id="comment" rows="10" required placeholder="Comment"></textarea>'));
   if(has_crypto)
-  { form.append($('<textarea id="key" rows="1" placeholder="Key (optional)" onchange="update_preview()" onkeyup="update_preview()"></textarea>'));
+  { key_input = $('<textarea id="key" rows="1" placeholder="Key (optional)"></textarea>');
+    key_input.change(update_preview);
+    key_input.keyup(update_preview);
+    form.append(key_input);
     form.append($('<input type="text" disabled id="hash_preview">'));
-    form.append($('<input type="button" value="Generate Key" onclick="generate_key(algorithms.RSA.RS256)">')); }
-  form.append($('<input type="submit" id="submit_button" onclick="submit_form()">')); }
+    generate_button = $('<input type="button" value="Generate Key">');
+    generate_button.click(algorithms.RSA.RS256, generate_key);
+    form.append(generate_button); }
+  submit_button = $('<input type="submit" id="submit_button">');
+  submit_button.click(submit_form);
+  form.append(submit_button); }
 
 function generate_key(algorithm)
 { if(algorithm.name.startsWith('RSA'))
