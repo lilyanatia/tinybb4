@@ -48,10 +48,10 @@ $(document).ready(function()
   if(has_crypto)
   { crypto.subtle.generateKey(
       { name: 'RSASSA-PKCS1-v1_5',
-        modulusLength: 256,
+        modulusLength: 2048,
         publicExponent: new Uint8Array([1, 0, 1]),
         hash: { name: 'SHA-1' } },
-      true, []).then(
+      true, ['sign', 'verify']).then(
       function(key)
       { return crypto.subtle.exportKey('jwk', key.publicKey); },
       function(e)
@@ -165,7 +165,7 @@ function reply_form(id)
     form.append(key_input);
     form.append($('<input type="text" disabled id="hash_preview">'));
     generate_button = $('<input type="button" value="Generate Key">');
-    generate_button.click(algorithms.RSA.RS256, generate_key);
+    generate_button.click(function(){ generate_key(algorithms.RSA.RS256); });
     form.append(generate_button); }
   submit_button = $('<input type="submit" id="submit_button">');
   submit_button.click(submit_form);
