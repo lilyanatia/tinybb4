@@ -8,6 +8,8 @@ use Time::HiRes qw/time sleep/;
 
 BEGIN { $| = 1; }
 
+binmode STDOUT, ':utf8';
+
 my @stat;
 my $query = CGI->new;
 my $thread = $query->param('thread');
@@ -33,6 +35,7 @@ if($last_id == $stat[9])
       exit; }
     sleep 0.01; }}
 open my $status, '<', $filename;
+binmode $status, ':utf8';
 flock $status, LOCK_SH;
 @stat = stat($status);
 print "id: $stat[9]\n";

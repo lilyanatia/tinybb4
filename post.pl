@@ -10,6 +10,8 @@ use JSON;
 use CGI;
 $CGI::POST_MAX = 4096;
 
+binmode STDOUT, ':utf8';
+
 my $query = CGI->new;
 my $thread_json;
 
@@ -35,26 +37,28 @@ sub thread_path($)
 sub create_thread($$$$)
 { my ($title, $comment, $key, $signature) = @_;
   if($key)
-  { $key = decode_json($key);
+  { $key = from_json($key);
     bad_request() unless
       $key->{'kty'} == 'RSA' && $key->{'alg'} =~ /^RS[0-9]+$/; }
   bad_request() unless $title;
   open my $threads_file, '+<', 'threads';
+  binmode $threads_file, ':utf8';
   flock $threads_file, LOCK_EX;
-  my $threads = decode_json(join '', <$threads_file>);
+  my $threads = from_json(join '', <$threads_file>);
   my @threads = @{$threads}; 
   @threads[@threads + 0] = { 'id' => @threads + 0, 'title' => $title };
   seek $threads_file, 0, 0;
-  print $threads_file encode_json(\@threads);
+  print $threads_file to_json(\@threads);
   flock $threads_file, LOCK_UN;
   close $threads_file;
   open my $thread_file, '>', "thread/$#threads";
+  binmode $thread_file, ':utf8';
   flock $thread_file, LOCK_EX;
-  $thread_json = encode_json(
+  $thread_json = to_json(
     [ $key ?
       { 'comment' => $comment,
         'key' => $key,
-        'signature' => decode_json($signature) } :
+        'signature' => from_json($signature) } :
       { 'comment' => $comment }
     ]);
   print $thread_file $thread_json;
@@ -66,16 +70,17 @@ sub add_post($$$$)
 { my ($thread, $comment, $key, $signature) = @_;
   bad_request() unless -e "thread/$thread";
   open my $thread_file, '+<', "thread/$thread";
+  binmode $thread_file, ':utf8';
   flock $thread_file, LOCK_EX;
-  my $thread = decode_json(join '', <$thread_file>);
+  my $thread = from_json(join '', <$thread_file>);
   my @thread = (@{$thread},
     $key ?
     { 'comment' => $comment,
-      'key' => decode_json($key),
-      'signature' => decode_json($signature) } :
+      'key' => from_json($key),
+      'signature' => from_json($signature) } :
     { 'comment' => $comment } );
   seek $thread_file, 0, 0;
-  $thread_json = encode_json(\@thread);
+  $thread_json = to_json(\@thread);
   print $thread_file $thread_json;
   flock $thread_file, LOCK_UN;
   close $thread_file; }
