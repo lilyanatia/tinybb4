@@ -72,7 +72,7 @@ function update_threads(data)
       count = data.length - old_threads.length,
       thread_list = $('#thread_list');
   threads = data;
-  for(i = 0; i < count; ++i)
+  for(i = threads.length - count; i < threads.length; ++i)
   { thread = $('<div>', { 'class': 'thread_title', 'id': threads[i].id });
     thread_list.prepend(thread);
     thread.append(threads[i].title); }
