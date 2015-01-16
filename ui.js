@@ -75,7 +75,7 @@ function update_threads(data)
   for(i = threads.length - count; i < threads.length; ++i)
   { thread = $('<div>', { 'class': 'thread_title', 'id': threads[i].id });
     thread_list.prepend(thread);
-    thread.append(threads[i].title); }
+    thread.append(document.createTextNode(threads[i].title)); }
   $('.thread_title').click(show_thread); }
 
 function show_thread()
