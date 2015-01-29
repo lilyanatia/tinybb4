@@ -14,7 +14,6 @@ var threads = [], thread_watch = [], jwk_wants_array = false,
     'RS512':
     { name: 'RSASSA-PKCS1-v1_5',
       hash: { name: 'SHA-512' } },
-    /* RSA-PSS disabled until browsers support it.
     'PS256':
     { name: 'RSA-PSS',
       hash: { name: 'SHA-256' } },
@@ -23,8 +22,7 @@ var threads = [], thread_watch = [], jwk_wants_array = false,
       hash: { name: 'SHA-384' } },
     'PS512':
     { name: 'RSA-PSS',
-      hash: { name: 'SHA-512' } } */ },
-  /* ECDSA disabled until browsers support it.
+      hash: { name: 'SHA-512' } } },
   'EC':
   { 'ES256':
     { name: 'ECDSA',
@@ -37,7 +35,7 @@ var threads = [], thread_watch = [], jwk_wants_array = false,
     'ES512':
     { name: 'ECDSA',
       namedCurve: 'P-521',
-      hash: { name: 'SHA-512' } } } */ };
+      hash: { name: 'SHA-512' } } } };
 
 $(document).ready(function()
 { var watch,
