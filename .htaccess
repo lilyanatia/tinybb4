@@ -1,6 +1,16 @@
+Header always set Content-Security-Policy "block-all-mixed-content; default-src 'self'; script-src 'self' ajax.googleapis.com"
+Header always set X-Content-Security-Policy "block-all-mixed-content; default-src 'self'; script-src 'self' ajax.googleapis.com"
+Header always set X-WebKit-CSP "block-all-mixed-content; default-src 'self'; script-src 'self' ajax.googleapis.com"
+
 <Files threads>
 ForceType application/json
 Header set Access-Control "allow <*>"
 Header set Access-Control-Allow-Origin *
 Header set Cache-control "max-age=0, must-revalidate"
 </Files>
+
+<FilesMatch "\.(cs|j)s$">
+ExpiresActive on
+ExpiresDefault "access plus 1 week"
+Header always set Vary "Accept-Encoding"
+</FilesMatch>
