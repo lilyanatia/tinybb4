@@ -91,7 +91,7 @@ function show_thread()
 function hide_thread()
 { var id = this.id;
   $(this).children().remove();
-  thread_watch[id].close();
+  if(window.EventSource) thread_watch[id].close();
   $(this).unbind('click', hide_thread);
   $(this).bind('click', show_thread); }
 
